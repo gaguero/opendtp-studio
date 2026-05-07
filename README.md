@@ -110,3 +110,7 @@ railway up
 5. Add font cataloging, font subsetting, hyphenation dictionaries, OpenType feature controls, and missing-font preflight.
 6. Add professional color management: ICC profiles, spot colors, separations, overprint preview, and Ghostscript/veraPDF validation for PDF/X.
 7. Add collaboration primitives: document locks, CRDT-backed editing, audit logs, and role-based permissions.
+
+## Research Labs
+
+The professional roadmap is broken into open-source research labs under [docs/labs](docs/labs/README.md). Each lab documents projects studied, what OpenDTP should reuse, experiments to build, acceptance criteria, and risks.

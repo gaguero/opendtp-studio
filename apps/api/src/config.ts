@@ -6,6 +6,7 @@ export type AppConfig = {
   openAiApiKey?: string;
   openAiModel: string;
   webDistPath: string;
+  dataDir: string;
 };
 
 export function readConfig(env = process.env): AppConfig {
@@ -14,6 +15,7 @@ export function readConfig(env = process.env): AppConfig {
     host: env.HOST ?? "0.0.0.0",
     openAiApiKey: env.OPENAI_API_KEY,
     openAiModel: env.OPENAI_MODEL ?? "gpt-4o-mini",
-    webDistPath: env.WEB_DIST_PATH ?? fileURLToPath(new URL("../../web/dist", import.meta.url))
+    webDistPath: env.WEB_DIST_PATH ?? fileURLToPath(new URL("../../web/dist", import.meta.url)),
+    dataDir: env.DATA_DIR ?? fileURLToPath(new URL("../../../data", import.meta.url))
   };
 }

@@ -10,6 +10,7 @@ import { z } from "zod";
 import { layoutDocumentSchema, runPreflight, sampleLayout } from "@opendtp/dtp-core";
 import { applyLayoutInstruction, editTextWithAi, promptToLayout } from "./ai.js";
 import type { AppConfig } from "./config.js";
+import { DocumentStore } from "./documents.js";
 import { renderPdf } from "./pdf.js";
 
 const promptRequestSchema = z.object({ prompt: z.string().min(1).max(8000) });
@@ -24,6 +25,7 @@ const layoutEditRequestSchema = z.object({
 
 export function buildApp(config: AppConfig) {
   const app = Fastify({ logger: true });
+  const documents = new DocumentStore(config.dataDir);
 
   app.register(helmet, {
     contentSecurityPolicy: false
@@ -54,6 +56,46 @@ export function buildApp(config: AppConfig) {
   }));
 
   app.get("/api/sample", async () => ({ layout: sampleLayout, preflight: runPreflight(sampleLayout) }));
+
+  app.get("/api/documents", async () => ({ documents: await documents.list() }));
+
+  app.post("/api/documents", async (request, reply) => {
+    const body = z.object({ layout: layoutDocumentSchema }).safeParse(request.body);
+    if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
+    const document = await documents.create(body.data.layout);
+    return reply.code(201).send({ document, preflight: runPreflight(document.layout) });
+  });
+
+  app.get("/api/documents/:id", async (request, reply) => {
+    const params = z.object({ id: z.string().min(1) }).safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: params.error.flatten() });
+    try {
+      const document = await documents.read(params.data.id);
+      return { document, preflight: runPreflight(document.layout) };
+    } catch {
+      return reply.code(404).send({ error: { message: "Document not found", requestId: request.id } });
+    }
+  });
+
+  app.put("/api/documents/:id", async (request, reply) => {
+    const params = z.object({ id: z.string().min(1) }).safeParse(request.params);
+    const body = z.object({ layout: layoutDocumentSchema }).safeParse(request.body);
+    if (!params.success) return reply.code(400).send({ error: params.error.flatten() });
+    if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
+    try {
+      const document = await documents.update(params.data.id, body.data.layout);
+      return { document, preflight: runPreflight(document.layout) };
+    } catch {
+      return reply.code(404).send({ error: { message: "Document not found", requestId: request.id } });
+    }
+  });
+
+  app.delete("/api/documents/:id", async (request, reply) => {
+    const params = z.object({ id: z.string().min(1) }).safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: params.error.flatten() });
+    await documents.delete(params.data.id);
+    return reply.code(204).send();
+  });
 
   app.post("/api/layouts/generate", async (request, reply) => {
     const body = promptRequestSchema.safeParse(request.body);
