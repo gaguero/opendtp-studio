@@ -1,0 +1,22 @@
+{
+  "name": "opendtp-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Open source browser-based desktop publishing studio with prompt-to-layout workflows.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/api",
+    "build": "npm run build -w packages/dtp-core && npm run build -w apps/api && npm run build -w apps/web",
+    "test": "npm run build -w packages/dtp-core && npm run test -w packages/dtp-core && npm run test -w apps/api",
+    "typecheck": "npm run build -w packages/dtp-core && npm run typecheck -w apps/api && npm run typecheck -w apps/web",
+    "start": "node apps/api/dist/server.js"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}
