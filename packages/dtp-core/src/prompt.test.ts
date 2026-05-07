@@ -4,6 +4,7 @@ import { sampleLayout } from "./sample.js";
 import { estimateCharactersPerFrame } from "./metrics.js";
 import { runPreflight } from "./preflight.js";
 import { applyLayoutPatches, type LayoutPatch } from "./ai-contracts.js";
+import { addPageWithLinkedStory, placedImageDpi, updateStoryContent } from "./document-ops.js";
 
 describe("dtp-core", () => {
   it("validates the sample layout", () => {
@@ -43,5 +44,29 @@ describe("dtp-core", () => {
     const body = next.pages[0]?.frames.find((frame) => frame.id === "body-copy");
     expect(next.pageSize.bleedMm).toBe(3);
     expect(body?.type === "text" ? body.columns : 0).toBe(3);
+  });
+
+  it("adds pages with linked story frames", () => {
+    const next = addPageWithLinkedStory(sampleLayout);
+    expect(next.pages).toHaveLength(2);
+    const frame = next.pages[1]?.frames[0];
+    expect(frame?.type === "text" ? frame.storyId : "").toBe("story-main");
+  });
+
+  it("updates story content and estimates placed image DPI", () => {
+    const next = updateStoryContent(sampleLayout, "story-main", "Updated copy");
+    const image = sampleLayout.pages[0]?.frames.find((frame) => frame.type === "image");
+    if (!image || image.type !== "image") throw new Error("Expected image frame");
+    expect(next.stories[0]?.content).toBe("Updated copy");
+    expect(placedImageDpi(image, { id: "asset", storageKey: "asset.png", metadata: { width: 2400, height: 1800 } })).toBeGreaterThan(300);
+  });
+
+  it("flags low placed image DPI in preflight context", () => {
+    const layout = structuredClone(sampleLayout);
+    const image = layout.pages[0]?.frames.find((frame) => frame.type === "image");
+    if (!image || image.type !== "image") throw new Error("Expected image frame");
+    image.src = "/api/assets/low.png";
+    const report = runPreflight(layout, { assets: [{ id: "a", storageKey: "low.png", metadata: { width: 320, height: 240 } }] });
+    expect(report.issues.some((issue) => issue.code === "low-dpi")).toBe(true);
   });
 });

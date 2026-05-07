@@ -11,6 +11,7 @@ import {
   Gauge,
   ImagePlus,
   Library,
+  ListPlus,
   MousePointer2,
   Save,
   RefreshCcw,
@@ -62,6 +63,7 @@ type AssetSummary = {
 
 const defaultPrompt =
   "Create an A4 editorial brief title: Local Food Futures with 3 columns, bleed, a lead image, and a serious magazine tone.";
+const LazyStoryEditor = React.lazy(() => import("./StoryEditor.js"));
 
 const initialPreflight: PreflightReport = {
   score: 72,
@@ -87,6 +89,7 @@ function App() {
   const [assets, setAssets] = React.useState<AssetSummary[]>([]);
   const [currentDocumentId, setCurrentDocumentId] = React.useState<string | null>(null);
   const [selectedFrameId, setSelectedFrameId] = React.useState<string | null>(null);
+  const activeStory = layout.stories[0];
 
   React.useEffect(() => {
     if (!toast) return;
@@ -122,6 +125,34 @@ function App() {
       setProvider(data.provider);
       pushHistory(instruction);
       setToast({ tone: "success", message: "Command applied to the document." });
+    });
+  }
+
+  async function addLinkedPage() {
+    await runAction("edit", async () => {
+      const data = await postJson<{ layout: LayoutDocument; preflight: PreflightReport }>("/api/layouts/add-page", {
+        layout,
+        storyId: activeStory?.id ?? "story-main"
+      });
+      setLayout(data.layout);
+      setPreflight(data.preflight);
+      pushHistory("Added linked story page");
+      setToast({ tone: "success", message: "Linked page added." });
+    });
+  }
+
+  async function updateStory(content: string) {
+    if (!activeStory) return;
+    await runAction("edit", async () => {
+      const data = await postJson<{ layout: LayoutDocument; preflight: PreflightReport }>("/api/stories/update", {
+        layout,
+        storyId: activeStory.id,
+        content
+      });
+      setLayout(data.layout);
+      setPreflight(data.preflight);
+      pushHistory(`Edited story: ${activeStory.title}`);
+      setToast({ tone: "success", message: "Story updated across linked frames." });
     });
   }
 
@@ -170,18 +201,22 @@ function App() {
       if (!response.ok) throw new Error(data.error?.message ?? `Upload failed with HTTP ${response.status}`);
       setAssets((current) => [data.asset, ...current]);
       if (selectedFrameId) assignImageToFrame(selectedFrameId, data.url);
+      await refreshPreflight(selectedFrameId ? assignImageLocally(layout, selectedFrameId, data.url) : layout);
       setToast({ tone: "success", message: selectedFrameId ? "Image uploaded and assigned." : "Image uploaded to library." });
     });
   }
 
   function assignImageToFrame(frameId: string, src: string) {
-    setLayout((current) => ({
-      ...current,
-      pages: current.pages.map((page) => ({
-        ...page,
-        frames: page.frames.map((frame) => (frame.id === frameId && frame.type === "image" ? { ...frame, src } : frame))
-      }))
-    }));
+    setLayout((current) => {
+      const next = assignImageLocally(current, frameId, src);
+      void refreshPreflight(next);
+      return next;
+    });
+  }
+
+  async function refreshPreflight(nextLayout = layout) {
+    const data = await postJson<{ preflight: PreflightReport }>("/api/preflight", { layout: nextLayout });
+    setPreflight(data.preflight);
   }
 
   async function saveDocument() {
@@ -248,13 +283,17 @@ function App() {
   }
 
   function updateFrame(frameId: string, patch: Partial<PageFrame>) {
-    setLayout((current) => ({
-      ...current,
-      pages: current.pages.map((page) => ({
-        ...page,
-        frames: page.frames.map((frame) => (frame.id === frameId ? ({ ...frame, ...patch } as PageFrame) : frame))
-      }))
-    }));
+    setLayout((current) => {
+      const next = {
+        ...current,
+        pages: current.pages.map((page) => ({
+          ...page,
+          frames: page.frames.map((frame) => (frame.id === frameId ? ({ ...frame, ...patch } as PageFrame) : frame))
+        }))
+      };
+      void refreshPreflight(next);
+      return next;
+    });
   }
 
   return (
@@ -278,6 +317,12 @@ function App() {
             <Wand2 size={16} /> {busy === "generate" ? "Generating..." : "Generate layout"}
           </button>
         </section>
+
+        {activeStory ? (
+          <React.Suspense fallback={<section className="story-panel">Loading story editor...</section>}>
+            <LazyStoryEditor storyTitle={activeStory.title} content={activeStory.content} onSave={updateStory} busy={Boolean(busy)} />
+          </React.Suspense>
+        ) : null}
 
         <section className="control-group">
           <div className="section-heading">
@@ -365,6 +410,9 @@ function App() {
           <button type="button" className="secondary" onClick={() => setInspectorOpen((value) => !value)}>
             <Code2 size={16} /> {inspectorOpen ? "Hide JSON" : "Inspect JSON"}
           </button>
+          <button type="button" className="secondary" onClick={addLinkedPage} disabled={Boolean(busy)}>
+            <ListPlus size={16} /> Add page
+          </button>
           <button type="button" className="export" onClick={exportPdf} disabled={Boolean(busy)}>
             <FileDown size={16} /> {busy === "export" ? "Exporting..." : "Export PDF"}
           </button>
@@ -406,6 +454,7 @@ function App() {
     </main>
   );
 }
+
 
 function PreflightPanel({ report }: { report: PreflightReport }) {
   const scoreTone = report.score >= 86 ? "good" : report.score >= 64 ? "warn" : "bad";
@@ -592,6 +641,16 @@ async function getJson<T>(url: string): Promise<T> {
 
 function roundMm(value: number): number {
   return Math.max(0, Math.round(value * 10) / 10);
+}
+
+function assignImageLocally(layout: LayoutDocument, frameId: string, src: string): LayoutDocument {
+  return {
+    ...layout,
+    pages: layout.pages.map((page) => ({
+      ...page,
+      frames: page.frames.map((frame) => (frame.id === frameId && frame.type === "image" ? { ...frame, src } : frame))
+    }))
+  };
 }
 
 function safeFilename(title: string): string {

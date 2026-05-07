@@ -8,7 +8,7 @@ import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 import { z } from "zod";
-import { layoutDocumentSchema, runPreflight, sampleLayout } from "@opendtp/dtp-core";
+import { addPageWithLinkedStory, layoutDocumentSchema, runPreflight, sampleLayout, updateStoryContent } from "@opendtp/dtp-core";
 import { applyLayoutInstruction, createAiRunRecord, editTextWithAi, promptToLayout } from "./ai.js";
 import type { AppConfig } from "./config.js";
 import { AssetStore } from "./assets.js";
@@ -24,6 +24,11 @@ const grammarRequestSchema = z.object({
 const layoutEditRequestSchema = z.object({
   layout: layoutDocumentSchema,
   instruction: z.string().min(1).max(1000)
+});
+const storyUpdateRequestSchema = z.object({
+  layout: layoutDocumentSchema,
+  storyId: z.string().min(1),
+  content: z.string().min(1).max(100000)
 });
 
 export function buildApp(config: AppConfig) {
@@ -71,6 +76,12 @@ export function buildApp(config: AppConfig) {
   app.get("/api/documents", async () => ({ documents: await documents.list() }));
 
   app.get("/api/assets", async () => ({ assets: await assets.list() }));
+
+  app.post("/api/preflight", async (request, reply) => {
+    const body = z.object({ layout: layoutDocumentSchema }).safeParse(request.body);
+    if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
+    return { preflight: runPreflight(body.data.layout, { assets: await assets.list() }) };
+  });
 
   app.post("/api/assets/images", async (request, reply) => {
     const file = await request.file();
@@ -142,6 +153,20 @@ export function buildApp(config: AppConfig) {
     const result = applyLayoutInstruction(body.data.layout, body.data.instruction);
     const run = createAiRunRecord("layout.patch", result.provider, "local-patch-engine", body.data, result.patches, Date.now() - started, true);
     return { ...result, preflight: runPreflight(result.layout), run };
+  });
+
+  app.post("/api/layouts/add-page", async (request, reply) => {
+    const body = z.object({ layout: layoutDocumentSchema, storyId: z.string().optional() }).safeParse(request.body);
+    if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
+    const layout = addPageWithLinkedStory(body.data.layout, body.data.storyId);
+    return { layout, preflight: runPreflight(layout) };
+  });
+
+  app.post("/api/stories/update", async (request, reply) => {
+    const body = storyUpdateRequestSchema.safeParse(request.body);
+    if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
+    const layout = updateStoryContent(body.data.layout, body.data.storyId, body.data.content);
+    return { layout, preflight: runPreflight(layout) };
   });
 
   app.post("/api/text/edit", async (request, reply) => {

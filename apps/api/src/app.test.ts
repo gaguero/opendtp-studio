@@ -72,6 +72,25 @@ describe("api", () => {
     await rm(dataDir, { recursive: true, force: true });
   });
 
+  it("adds linked pages and updates stories", async () => {
+    const { app, dataDir } = await testApp();
+    const pageResponse = await app.inject({
+      method: "POST",
+      url: "/api/layouts/add-page",
+      payload: { layout: sampleLayout }
+    });
+    expect(pageResponse.statusCode).toBe(200);
+    expect(pageResponse.json().layout.pages).toHaveLength(2);
+
+    const storyResponse = await app.inject({
+      method: "POST",
+      url: "/api/stories/update",
+      payload: { layout: sampleLayout, storyId: "story-main", content: "Fresh edited story" }
+    });
+    expect(storyResponse.json().layout.stories[0].content).toBe("Fresh edited story");
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
   it("exports a real PDF", async () => {
     const { app, dataDir } = await testApp();
     const sample = await app.inject({ method: "GET", url: "/api/sample" });
@@ -167,6 +186,18 @@ describe("api", () => {
     expect(response.json().asset.metadata.width).toBe(1);
     const list = await app.inject({ method: "GET", url: "/api/assets" });
     expect(list.json().assets).toHaveLength(1);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  it("runs preflight with asset context", async () => {
+    const { app, dataDir } = await testApp();
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/preflight",
+      payload: { layout: sampleLayout }
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().preflight.score).toBeGreaterThan(0);
     await rm(dataDir, { recursive: true, force: true });
   });
 });

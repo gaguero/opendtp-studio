@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@opendtp/dtp-core": "^1.0.0",
+    "@tiptap/react": "^3.22.5",
+    "@tiptap/starter-kit": "^3.22.5",
     "@vitejs/plugin-react": "^6.0.1",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",

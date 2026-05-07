@@ -1,8 +1,9 @@
 import type { ImageFrame, LayoutDocument, TextFrame } from "./schema.js";
 import { estimateCharactersPerFrame, storyForFrame } from "./metrics.js";
+import { placedImageDpi, type ImageAssetLike } from "./document-ops.js";
 
 export type PreflightIssue = {
-  code: "overset-risk" | "missing-image" | "soft-cmyk" | "no-bleed" | "tiny-frame";
+  code: "overset-risk" | "missing-image" | "low-dpi" | "soft-cmyk" | "no-bleed" | "tiny-frame";
   severity: "info" | "warning" | "error";
   message: string;
   frameId?: string;
@@ -15,7 +16,7 @@ export type PreflightReport = {
   textLength: number;
 };
 
-export function runPreflight(document: LayoutDocument): PreflightReport {
+export function runPreflight(document: LayoutDocument, context: { assets?: ImageAssetLike[] } = {}): PreflightReport {
   const issues: PreflightIssue[] = [];
   let textCapacity = 0;
   let textLength = 0;
@@ -47,6 +48,17 @@ export function runPreflight(document: LayoutDocument): PreflightReport {
             frameId: imageFrame.id,
             message: `Image frame "${imageFrame.id}" is using a generated placeholder.`
           });
+        } else {
+          const asset = context.assets?.find((candidate) => imageFrame.src?.includes(candidate.storageKey));
+          const dpi = asset ? placedImageDpi(imageFrame, asset) : null;
+          if (dpi !== null && dpi < 300) {
+            issues.push({
+              code: "low-dpi",
+              severity: dpi < 180 ? "error" : "warning",
+              frameId: imageFrame.id,
+              message: `Image frame "${imageFrame.id}" is placed at ${dpi} DPI; print work usually needs 300 DPI.`
+            });
+          }
         }
       }
     }

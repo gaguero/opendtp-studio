@@ -312,11 +312,48 @@ textarea {
   font-size: 0.78rem;
 }
 
+.story-panel {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  background: color-mix(in oklch, var(--surface), white 20%);
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 6px;
+}
+
+.story-editor {
+  min-height: 122px;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  background: oklch(96% 0.01 84);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.story-editor .ProseMirror {
+  min-height: 96px;
+  outline: none;
+  line-height: 1.45;
+  font-size: 0.9rem;
+}
+
+.story-editor p {
+  margin: 0 0 8px;
+}
+
 .footer-actions {
   margin-top: auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.footer-actions .export {
+  grid-column: 1 / -1;
 }
 
 .action-row {

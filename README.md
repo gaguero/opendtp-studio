@@ -124,4 +124,7 @@ The professional roadmap is broken into open-source research labs under [docs/la
 - Direct frame manipulation in the editor through open source `react-rnd`.
 - Typed AI layout patches and story edit metadata with audit-style run records.
 - Image asset upload with Sharp metadata extraction.
+- Multi-page linked story page creation.
+- Tiptap-powered story editing, lazy-loaded to keep the main editor lighter.
+- Asset-aware preflight with placed image DPI checks.
 - Export job abstraction with downloadable PDF artifacts.

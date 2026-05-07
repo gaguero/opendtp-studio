@@ -24,8 +24,10 @@ Open source acceleration:
 ## Phase 2: Professional Document Model
 
 - Multi-page documents.
+- Multi-page documents: first implementation complete via linked page creation.
 - Spreads and master pages.
 - Linked text frames across pages.
+- Linked text frames across pages: first story-linking foundation implemented.
 - Paragraph, character, and object styles.
 - Layers, locking, visibility, z-order.
 - Guides, rulers, snapping, and baseline grid.
@@ -41,7 +43,7 @@ Open source candidates:
 
 - Image uploads and asset library.
 - Image uploads and asset library: foundation implemented with local storage and Sharp metadata.
-- DPI and color profile checks.
+- DPI checks: first asset-aware preflight implemented.
 - Font upload/catalog.
 - Font subsetting and embedding.
 - Missing font and missing asset recovery.
