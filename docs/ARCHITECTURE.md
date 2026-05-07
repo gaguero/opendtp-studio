@@ -34,7 +34,7 @@ The schema is intentionally explicit so AI output can be validated and repaired.
 
 The browser preview renders fixed-size pages and absolutely positioned frames. Text frames use CSS multicolumn layout for dynamic flow inside the frame. This is sufficient for MVP editing and immediate visual feedback.
 
-Professional export should move to a worker because pagination, font loading, and PDF generation are CPU and memory heavy. The worker should render canonical HTML/CSS from the layout JSON, run Vivliostyle or Paged.js for paged media, and emit the final PDF through Playwright/Chromium or a dedicated PDF engine.
+Version 1.0 includes synchronous PDF export from layout JSON through a Node PDF renderer. Professional export should still move to a worker because pagination, font loading, and PDF/X generation are CPU and memory heavy. The worker should render canonical HTML/CSS from the layout JSON, run Vivliostyle or Paged.js for paged media, and emit the final PDF through Playwright/Chromium or a dedicated PDF engine.
 
 ## AI Strategy
 

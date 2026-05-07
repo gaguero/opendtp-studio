@@ -26,5 +26,30 @@ describe("api", () => {
     expect(response.statusCode).toBe(200);
     expect(json.provider).toBe("local-fallback");
     expect(json.layout.pageSize.name).toBe("A4");
+    expect(json.preflight.score).toBeGreaterThan(0);
+  });
+
+  it("exports a real PDF", async () => {
+    const sample = await app.inject({ method: "GET", url: "/api/sample" });
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/export/pdf",
+      payload: { layout: sample.json().layout }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("application/pdf");
+    expect(response.rawPayload.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("returns structured validation errors", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/layouts/generate",
+      payload: { prompt: "" }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBeTruthy();
   });
 });

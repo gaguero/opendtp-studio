@@ -1,6 +1,6 @@
 # OpenDTP Studio
 
-OpenDTP Studio is an open source browser-based desktop publishing platform. The 1.0 MVP combines a TypeScript DTP layout contract, a prompt-to-layout API, and a React workspace that renders printable page geometry, editable frames, and dynamic multi-column text flow.
+OpenDTP Studio is an open source browser-based desktop publishing platform. Version 1.0 combines a TypeScript DTP layout contract, a prompt-to-layout API, real server-side PDF export, and a React workspace that renders printable page geometry, editable frames, and dynamic multi-column text flow.
 
 ## Status
 
@@ -15,7 +15,7 @@ OpenDTP Studio is an open source browser-based desktop publishing platform. The 
 The best MVP stack is a modular TypeScript monolith:
 
 - **Rendering:** browser CSS Paged Media plus CSS multi-column flow for live preview. MDN documents CSS paged media for page size, margins, page breaks, and generated pages, while `column-fill` controls how text fills columns in multicol layouts.
-- **PDF path:** Playwright/Chromium for pragmatic server-side PDF export, with Vivliostyle or Paged.js as the next pagination worker. Playwright documents `page.pdf()` and print CSS behavior; Vivliostyle provides an open CSS typesetting engine and CLI for HTML/Markdown to PDF.
+- **PDF path:** The production 1.0 endpoint emits real PDFs from layout JSON through a Node renderer. Playwright/Chromium with Vivliostyle or Paged.js remains the next pagination worker for PDF/X-grade output.
 - **Backend:** Fastify on Node.js because the product is TypeScript end-to-end, deploys cleanly as one Railway container, and can later split export/AI jobs into workers.
 - **LLM integration:** OpenAI Responses API with Structured Outputs when credentials exist, because OpenAI recommends schema-constrained JSON for reliable typed output. The app includes a deterministic fallback so CI and demos do not require paid API access.
 
@@ -82,7 +82,7 @@ Without `OPENAI_API_KEY`, `/api/layouts/generate` uses the local deterministic l
 - `POST /api/layouts/generate` with `{ "prompt": "..." }`
 - `POST /api/layouts/edit` with `{ "layout": LayoutDocument, "instruction": "..." }`
 - `POST /api/text/edit` with `{ "text": "...", "instruction": "..." }`
-- `POST /api/export/pdf` with `{ "layout": LayoutDocument }`
+- `POST /api/export/pdf` with `{ "layout": LayoutDocument }`, returning `application/pdf`
 
 ## Railway Deployment
 
@@ -106,7 +106,7 @@ railway up
 1. Split the monolith into `web-api`, `export-worker`, and `ai-worker` services.
 2. Add PostgreSQL for projects, document versions, comments, and asset metadata.
 3. Add object storage for images, font files, generated PDFs, and preview thumbnails.
-4. Replace MVP PDF handoff with a queue-backed worker using Vivliostyle/Paged.js plus Playwright for final PDF generation.
+4. Replace the current synchronous PDFKit renderer with a queue-backed worker using Vivliostyle/Paged.js plus Playwright for final PDF/X-grade generation.
 5. Add font cataloging, font subsetting, hyphenation dictionaries, OpenType feature controls, and missing-font preflight.
 6. Add professional color management: ICC profiles, spot colors, separations, overprint preview, and Ghostscript/veraPDF validation for PDF/X.
 7. Add collaboration primitives: document locks, CRDT-backed editing, audit logs, and role-based permissions.

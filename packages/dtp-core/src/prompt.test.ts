@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generateFallbackLayout, validateLayout } from "./prompt.js";
 import { sampleLayout } from "./sample.js";
 import { estimateCharactersPerFrame } from "./metrics.js";
+import { runPreflight } from "./preflight.js";
 
 describe("dtp-core", () => {
   it("validates the sample layout", () => {
@@ -23,5 +24,12 @@ describe("dtp-core", () => {
     const body = sampleLayout.pages[0]?.frames.find((frame) => frame.id === "body-copy");
     if (!body || body.type !== "text") throw new Error("Expected body text frame");
     expect(estimateCharactersPerFrame(sampleLayout, body)).toBeGreaterThan(1000);
+  });
+
+  it("reports preflight issues and score", () => {
+    const report = runPreflight(sampleLayout);
+    expect(report.score).toBeLessThan(100);
+    expect(report.issues.some((issue) => issue.code === "missing-image")).toBe(true);
+    expect(report.textCapacity).toBeGreaterThan(report.textLength);
   });
 });

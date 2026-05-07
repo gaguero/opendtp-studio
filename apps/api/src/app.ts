@@ -2,12 +2,15 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 import { z } from "zod";
-import { layoutDocumentSchema, sampleLayout } from "@opendtp/dtp-core";
+import { layoutDocumentSchema, runPreflight, sampleLayout } from "@opendtp/dtp-core";
 import { applyLayoutInstruction, editTextWithAi, promptToLayout } from "./ai.js";
 import type { AppConfig } from "./config.js";
+import { renderPdf } from "./pdf.js";
 
 const promptRequestSchema = z.object({ prompt: z.string().min(1).max(8000) });
 const grammarRequestSchema = z.object({
@@ -22,27 +25,48 @@ const layoutEditRequestSchema = z.object({
 export function buildApp(config: AppConfig) {
   const app = Fastify({ logger: true });
 
+  app.register(helmet, {
+    contentSecurityPolicy: false
+  });
+  app.register(rateLimit, {
+    max: 120,
+    timeWindow: "1 minute"
+  });
   app.register(cors, { origin: true });
+
+  app.setErrorHandler((error, request, reply) => {
+    request.log.error(error);
+    const candidate = error as { statusCode?: number; message?: string };
+    const statusCode = candidate.statusCode && candidate.statusCode >= 400 ? candidate.statusCode : 500;
+    return reply.code(statusCode).send({
+      error: {
+        message: statusCode >= 500 ? "Unexpected server error" : candidate.message ?? "Request failed",
+        requestId: request.id
+      }
+    });
+  });
 
   app.get("/api/health", async () => ({
     ok: true,
     version: "1.0.0",
     ai: Boolean(config.openAiApiKey),
-    renderer: "css-paged-media-playwright-ready"
+    renderer: "pdfkit-live"
   }));
 
-  app.get("/api/sample", async () => ({ layout: sampleLayout }));
+  app.get("/api/sample", async () => ({ layout: sampleLayout, preflight: runPreflight(sampleLayout) }));
 
   app.post("/api/layouts/generate", async (request, reply) => {
     const body = promptRequestSchema.safeParse(request.body);
     if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
-    return promptToLayout(body.data.prompt, { apiKey: config.openAiApiKey, model: config.openAiModel });
+    const result = await promptToLayout(body.data.prompt, { apiKey: config.openAiApiKey, model: config.openAiModel });
+    return { ...result, preflight: runPreflight(result.layout) };
   });
 
   app.post("/api/layouts/edit", async (request, reply) => {
     const body = layoutEditRequestSchema.safeParse(request.body);
     if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
-    return { layout: applyLayoutInstruction(body.data.layout, body.data.instruction), provider: "local-layout-transform" };
+    const layout = applyLayoutInstruction(body.data.layout, body.data.instruction);
+    return { layout, provider: "local-layout-transform", preflight: runPreflight(layout) };
   });
 
   app.post("/api/text/edit", async (request, reply) => {
@@ -54,11 +78,11 @@ export function buildApp(config: AppConfig) {
   app.post("/api/export/pdf", async (request, reply) => {
     const body = z.object({ layout: layoutDocumentSchema }).safeParse(request.body);
     if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
-    return reply.code(202).send({
-      status: "queued",
-      renderer: "playwright-vivliostyle-worker-planned",
-      message: "MVP validates the layout and prepares the export handoff. Production PDF/X export belongs in a worker service."
-    });
+    const pdf = await renderPdf(body.data.layout);
+    return reply
+      .header("Content-Type", "application/pdf")
+      .header("Content-Disposition", `attachment; filename="${safeFilename(body.data.layout.title)}.pdf"`)
+      .send(pdf);
   });
 
   const webDist = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "../../../web/dist");
@@ -76,4 +100,8 @@ export function buildApp(config: AppConfig) {
   });
 
   return app;
+}
+
+function safeFilename(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64) || "opendtp-document";
 }
