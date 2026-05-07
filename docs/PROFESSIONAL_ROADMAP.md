@@ -6,14 +6,14 @@ Detailed open-source research lives in [OpenDTP Research Labs](./labs/README.md)
 
 ## Phase 1: Durable Documents and Direct Editing
 
-Status: in progress.
+Status: implemented as the first production foundation.
 
-- Document CRUD API.
-- Local filesystem store for development and Railway demos.
+- Document CRUD API: implemented.
+- Local filesystem store for development and Railway demos: implemented.
 - PostgreSQL-ready repository boundary.
-- Direct frame drag/resize in the browser.
-- Save/load/new document UX.
-- Existing preflight and PDF export preserved.
+- Direct frame drag/resize in the browser: implemented with `react-rnd`.
+- Save/load/new document UX: implemented.
+- Existing preflight and PDF export preserved and routed through export jobs.
 
 Open source acceleration:
 
@@ -40,6 +40,7 @@ Open source candidates:
 ## Phase 3: Asset and Font Pipeline
 
 - Image uploads and asset library.
+- Image uploads and asset library: foundation implemented with local storage and Sharp metadata.
 - DPI and color profile checks.
 - Font upload/catalog.
 - Font subsetting and embedding.

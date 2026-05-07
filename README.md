@@ -1,6 +1,6 @@
 # OpenDTP Studio
 
-OpenDTP Studio is an open source browser-based desktop publishing platform. Version 1.0 combines a TypeScript DTP layout contract, a prompt-to-layout API, real server-side PDF export, and a React workspace that renders printable page geometry, editable frames, and dynamic multi-column text flow.
+OpenDTP Studio is an open source browser-based desktop publishing platform. Version 1.0 combines a TypeScript DTP layout contract, a prompt-to-layout API, document persistence, asset upload, export jobs, real server-side PDF export, and a React workspace that renders printable page geometry, directly editable frames, and dynamic multi-column text flow.
 
 ## Status
 
@@ -45,8 +45,8 @@ References:
 
 ```text
 apps/
-  api/        Fastify API, OpenAI adapter, static web serving
-  web/        React/Vite editor and page preview
+  api/        Fastify API, OpenAI adapter, documents, assets, export jobs
+  web/        React/Vite editor, page preview, direct frame editing
 packages/
   dtp-core/   Zod schema, layout types, prompt fallback engine, metrics
 .github/
@@ -83,6 +83,9 @@ Without `OPENAI_API_KEY`, `/api/layouts/generate` uses the local deterministic l
 - `POST /api/layouts/edit` with `{ "layout": LayoutDocument, "instruction": "..." }`
 - `POST /api/text/edit` with `{ "text": "...", "instruction": "..." }`
 - `POST /api/export/pdf` with `{ "layout": LayoutDocument }`, returning `application/pdf`
+- `POST /api/export/jobs` with `{ "layout": LayoutDocument }`, returning an export job and artifact URL
+- `GET /api/documents`, `POST /api/documents`, `GET/PUT/DELETE /api/documents/:id`
+- `GET /api/assets`, `POST /api/assets/images`, `GET /api/assets/:storageKey`
 
 ## Railway Deployment
 
@@ -114,3 +117,11 @@ railway up
 ## Research Labs
 
 The professional roadmap is broken into open-source research labs under [docs/labs](docs/labs/README.md). Each lab documents projects studied, what OpenDTP should reuse, experiments to build, acceptance criteria, and risks.
+
+## Current Professional Features
+
+- Persistent document API with local filesystem storage and a PostgreSQL-ready repository boundary.
+- Direct frame manipulation in the editor through open source `react-rnd`.
+- Typed AI layout patches and story edit metadata with audit-style run records.
+- Image asset upload with Sharp metadata extraction.
+- Export job abstraction with downloadable PDF artifacts.

@@ -163,13 +163,18 @@ label {
 }
 
 textarea,
-input {
+input,
+select {
   width: 100%;
   border: 1px solid var(--line);
   background: oklch(95% 0.012 82);
   color: inherit;
   border-radius: 6px;
   padding: 12px;
+}
+
+select {
+  min-height: 42px;
 }
 
 textarea {
@@ -277,8 +282,44 @@ textarea {
   white-space: nowrap;
 }
 
+.upload-button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: oklch(87% 0.034 83);
+  cursor: pointer;
+}
+
+.upload-button input {
+  display: none;
+}
+
+.asset-item {
+  min-height: 34px;
+  justify-content: space-between;
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+  padding-inline: 10px;
+}
+
+.asset-item span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .footer-actions {
   margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.action-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -361,8 +402,24 @@ textarea {
   outline: 1px dashed oklch(62% 0.12 34);
 }
 
+.frame-rnd {
+  z-index: 1;
+}
+
+.frame-rnd.selected {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 3px;
+  z-index: 3;
+}
+
+.frame-rnd:hover {
+  outline: 1px solid color-mix(in oklch, var(--accent-2), white 28%);
+  outline-offset: 2px;
+}
+
 .frame {
-  position: absolute;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -396,6 +453,14 @@ textarea {
   color: oklch(20% 0.025 64);
   font-size: 0.78rem;
   font-weight: 850;
+  background-size: cover;
+  background-position: center;
+}
+
+.image-frame[style*="url"] span {
+  background: oklch(98% 0.006 88 / 86%);
+  padding: 4px 6px;
+  border-radius: 4px;
 }
 
 .json-inspector {

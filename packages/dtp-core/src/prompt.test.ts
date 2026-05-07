@@ -3,6 +3,7 @@ import { generateFallbackLayout, validateLayout } from "./prompt.js";
 import { sampleLayout } from "./sample.js";
 import { estimateCharactersPerFrame } from "./metrics.js";
 import { runPreflight } from "./preflight.js";
+import { applyLayoutPatches, type LayoutPatch } from "./ai-contracts.js";
 
 describe("dtp-core", () => {
   it("validates the sample layout", () => {
@@ -31,5 +32,16 @@ describe("dtp-core", () => {
     expect(report.score).toBeLessThan(100);
     expect(report.issues.some((issue) => issue.code === "missing-image")).toBe(true);
     expect(report.textCapacity).toBeGreaterThan(report.textLength);
+  });
+
+  it("applies typed layout patches", () => {
+    const patches: LayoutPatch[] = [
+      { op: "set_page_bleed", bleedMm: 3 },
+      { op: "set_text_columns", frameId: "body-copy", columns: 3, columnGapMm: 4 }
+    ];
+    const next = applyLayoutPatches(sampleLayout, patches);
+    const body = next.pages[0]?.frames.find((frame) => frame.id === "body-copy");
+    expect(next.pageSize.bleedMm).toBe(3);
+    expect(body?.type === "text" ? body.columns : 0).toBe(3);
   });
 });
